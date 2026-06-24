@@ -287,6 +287,23 @@ app.post('/notes/ai', validateToken, checkRelationship('elderId'), async (req, r
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Notes service running on port ${PORT}`);
-});
+
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notes (
+      id           SERIAL PRIMARY KEY,
+      user_id      INT NOT NULL,
+      author_id    INT NOT NULL,
+      note_type    VARCHAR(20) DEFAULT 'MANUAL_NOTE',
+      note_category VARCHAR(20) DEFAULT 'PATIENT',
+      content      TEXT NOT NULL,
+      created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  console.log('✅ Notes table ready.');
+}
+
+initDb()
+  .then(() => app.listen(PORT, () => console.log(`Notes service running on port ${PORT}`)))
+  .catch(err => { console.error('DB init failed:', err.message); process.exit(1); });
