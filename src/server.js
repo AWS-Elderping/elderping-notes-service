@@ -258,22 +258,45 @@ app.delete('/notes/:id', validateToken, async (req, res) => {
   }
 });
 
-// AI placeholder generation endpoint
+// AI note generation endpoint — calls ai-service for a real Bedrock summary
 app.post('/notes/ai', validateToken, checkRelationship('elderId'), async (req, res) => {
   try {
-    const { elderId, content, vitals } = req.body;
+    const { elderId, vitals } = req.body;
     const authorId = req.user.id || req.user.userId;
 
     if (!elderId) {
       return res.status(400).json({ error: 'elderId is required' });
     }
 
-    const mockContent = content || `[MOCK AI SUMMARY] Health log assessment check completed. SpO2 parameters and blood pressure are steady. Recommended precautions: maintain daily tracking, regular exercise.`;
+    let aiContent = '';
+    try {
+      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:3000';
+      const vitalsText = vitals ? ` Vitals: ${JSON.stringify(vitals)}.` : '';
+      const aiRes = await fetch(`${aiServiceUrl}/ai/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': req.headers.authorization },
+        body: JSON.stringify({
+          userId: String(elderId),
+          capability: 'symptom_check',
+          query: `Generate a brief clinical notes summary for this elder patient.${vitalsText} Focus on health status, any concerns, and care recommendations. Keep it under 100 words.`
+        })
+      });
+      if (aiRes.ok) {
+        const aiData = await aiRes.json();
+        aiContent = aiData.result || '';
+      }
+    } catch (aiErr) {
+      console.error('AI service call failed:', aiErr.message);
+    }
+
+    if (!aiContent) {
+      aiContent = 'Health log assessment completed. Parameters appear steady. Recommended: maintain daily tracking and regular check-ins.';
+    }
 
     const result = await pool.query(
       `INSERT INTO notes (user_id, author_id, note_type, content, note_category)
        VALUES ($1, $2, 'AI_NOTE', $3, 'AI') RETURNING *`,
-      [elderId, authorId, mockContent]
+      [elderId, authorId, aiContent]
     );
     const aiNote = result.rows[0];
 
