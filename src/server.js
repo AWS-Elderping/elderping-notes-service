@@ -312,11 +312,26 @@ app.post('/notes/ai', validateToken, checkRelationship('elderId'), async (req, r
 const PORT = process.env.PORT || 3000;
 
 async function initDb() {
+  // Drop and recreate the notes table if it was created with INT user_id
+  // (production uses UUID-based user IDs which are TEXT, not INT)
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'notes'
+          AND column_name = 'user_id'
+          AND data_type = 'integer'
+      ) THEN
+        DROP TABLE IF EXISTS notes CASCADE;
+      END IF;
+    END $$;
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS notes (
       id           SERIAL PRIMARY KEY,
-      user_id      INT NOT NULL,
-      author_id    INT NOT NULL,
+      user_id      TEXT NOT NULL,
+      author_id    TEXT NOT NULL,
       note_type    VARCHAR(20) DEFAULT 'MANUAL_NOTE',
       note_category VARCHAR(20) DEFAULT 'PATIENT',
       content      TEXT NOT NULL,
