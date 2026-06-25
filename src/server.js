@@ -92,9 +92,9 @@ const searchHandler = async (req, res) => {
     const { category, author, startDate, endDate, keyword } = req.query;
 
     let sql = `
-      SELECT n.*, u.username as author_name 
-      FROM notes n 
-      JOIN users u ON n.author_id = u.id 
+      SELECT n.*, u.username as author_name
+      FROM notes n
+      JOIN users u ON n.author_id = u.id::text
       WHERE n.user_id = $1
     `;
     const params = [elderId];
@@ -137,10 +137,10 @@ app.get('/notes/:elderId', validateToken, checkRelationship('elderId'), async (r
   try {
     const { elderId } = req.params;
     const result = await pool.query(
-      `SELECT n.*, u.username as author_name 
-       FROM notes n 
-       JOIN users u ON n.author_id = u.id 
-       WHERE n.user_id = $1 
+      `SELECT n.*, u.username as author_name
+       FROM notes n
+       JOIN users u ON n.author_id = u.id::text
+       WHERE n.user_id = $1
        ORDER BY n.created_at DESC`,
       [elderId]
     );
@@ -155,10 +155,10 @@ app.get('/notes/user/:userId', validateToken, checkRelationship('userId'), async
   try {
     const { userId } = req.params;
     const result = await pool.query(
-      `SELECT n.*, u.username as author_name 
-       FROM notes n 
-       JOIN users u ON n.author_id = u.id 
-       WHERE n.user_id = $1 
+      `SELECT n.*, u.username as author_name
+       FROM notes n
+       JOIN users u ON n.author_id = u.id::text
+       WHERE n.user_id = $1
        ORDER BY n.created_at DESC`,
       [userId]
     );
