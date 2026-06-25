@@ -25,9 +25,9 @@ function getKey(header, callback) {
   });
 }
 
-// Global Auth Pool for local check if in users_db (auth-service)
+// Global Auth Pool for local check if on the same DB as auth-service
 let pool = null;
-if (process.env.DB_NAME === 'users_db') {
+if (process.env.DB_NAME === 'users_db' || process.env.DB_NAME === 'users_db_dev') {
   pool = new Pool({
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -171,8 +171,8 @@ const checkRelationship = (elderIdParam = 'elderId') => {
         const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3000';
         let linked = false;
 
-        if (process.env.DB_NAME === 'users_db' && pool) {
-          // If in auth-service, check table directly
+        if ((process.env.DB_NAME === 'users_db' || process.env.DB_NAME === 'users_db_dev') && pool) {
+          // Check family_links directly (same DB as auth-service)
           const result = await pool.query(
             'SELECT 1 FROM family_links WHERE family_id = $1 AND elder_id = $2',
             [userId, elderId]
